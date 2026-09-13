@@ -1,0 +1,9 @@
+﻿apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loantrack-config
+  namespace: loantrack
+data:
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_NAME: loantrack

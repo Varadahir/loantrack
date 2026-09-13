@@ -137,6 +137,7 @@ def healthz():
     return {
         "status": "ok",
         "service": "loantrack-api",
+        "version": "v2",
     }
 
 
