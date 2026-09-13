@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LoanTrack</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            color: #1f2937;
+        }
+
+        header {
+            background: #1f2937;
+            color: white;
+            padding: 24px;
+        }
+
+        header h1 {
+            margin: 0 0 6px;
+        }
+
+        header p {
+            margin: 0;
+            color: #d1d5db;
+        }
+
+        main {
+            max-width: 1100px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        h2 {
+            margin-top: 0;
+        }
+
+        form {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group.full {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            font-weight: bold;
+        }
+
+        input,
+        select,
+        button {
+            padding: 11px;
+            border-radius: 6px;
+            border: 1px solid #d1d5db;
+            font-size: 15px;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        th {
+            background: #f9fafb;
+        }
+
+        .status {
+            font-weight: bold;
+        }
+
+        .message {
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        .error {
+            color: #dc2626;
+        }
+
+        .success {
+            color: #16a34a;
+        }
+
+        .served-by {
+            font-size: 13px;
+            color: #6b7280;
+            margin-top: 12px;
+        }
+
+        @media (max-width: 700px) {
+            form {
+                grid-template-columns: 1fr;
+            }
+
+            .form-group.full {
+                grid-column: auto;
+            }
+
+            table {
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>LoanTrack</h1>
+    <p>Loan Management Dashboard</p>
+</header>
+
+<main>
+
+    <section class="card">
+        <h2>Add New Loan</h2>
+
+        <form id="loan-form">
+
+            <div class="form-group">
+                <label for="borrower_name">Borrower Name</label>
+                <input
+                    type="text"
+                    id="borrower_name"
+                    required
+                    placeholder="Enter borrower name"
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="loan_amount">Loan Amount</label>
+                <input
+                    type="number"
+                    id="loan_amount"
+                    min="0.01"
+                    step="0.01"
+                    required
+                    placeholder="Enter loan amount"
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="property_city">Property City</label>
+                <input
+                    type="text"
+                    id="property_city"
+                    placeholder="Enter city"
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="status">Status</label>
+                <select id="status">
+                    <option value="PENDING">PENDING</option>
+                    <option value="APPROVED">APPROVED</option>
+                    <option value="CLOSED">CLOSED</option>
+                </select>
+            </div>
+
+            <div class="form-group full">
+                <button type="submit">Add Loan</button>
+            </div>
+
+        </form>
+
+        <div id="message" class="message"></div>
+    </section>
+
+    <section class="card">
+        <h2>Loans</h2>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Borrower</th>
+                    <th>Amount</th>
+                    <th>City</th>
+                    <th>Status</th>
+                    <th>Created At</th>
+                </tr>
+            </thead>
+
+            <tbody id="loan-table-body">
+                <tr>
+                    <td colspan="6">Loading loans...</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div id="served-by" class="served-by"></div>
+    </section>
+
+</main>
+
+<script>
+    const API_BASE_URL = "/api";
+
+    const loanForm = document.getElementById("loan-form");
+    const loanTableBody = document.getElementById("loan-table-body");
+    const message = document.getElementById("message");
+    const servedBy = document.getElementById("served-by");
+
+
+    function showMessage(text, type) {
+        message.textContent = text;
+        message.className = `message ${type}`;
+    }
+
+
+    function formatAmount(amount) {
+        return Number(amount).toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+
+    function renderLoans(loans) {
+        loanTableBody.innerHTML = "";
+
+        if (loans.length === 0) {
+            loanTableBody.innerHTML = `
+                <tr>
+                    <td colspan="6">No loans found.</td>
+                </tr>
+            `;
+            return;
+        }
+
+        loans.forEach((loan) => {
+            const row = document.createElement("tr");
+
+            row.innerHTML = `
+                <td>${loan.id}</td>
+                <td>${loan.borrower_name}</td>
+                <td>${formatAmount(loan.loan_amount)}</td>
+                <td>${loan.property_city || "-"}</td>
+                <td class="status">${loan.status}</td>
+                <td>${new Date(loan.created_at).toLocaleString()}</td>
+            `;
+
+            loanTableBody.appendChild(row);
+        });
+    }
+
+
+    async function loadLoans() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/loans`);
+
+            if (!response.ok) {
+                throw new Error("Failed to load loans.");
+            }
+
+            const data = await response.json();
+
+            renderLoans(data.loans);
+
+            servedBy.textContent = `Backend response served by: ${data.served_by}`;
+
+        } catch (error) {
+            loanTableBody.innerHTML = `
+                <tr>
+                    <td colspan="6">
+                        Unable to load loans. Backend may be unavailable.
+                    </td>
+                </tr>
+            `;
+
+            servedBy.textContent = "";
+        }
+    }
+
+
+    loanForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const loan = {
+            borrower_name: document.getElementById("borrower_name").value.trim(),
+            loan_amount: Number(document.getElementById("loan_amount").value),
+            property_city: document.getElementById("property_city").value.trim() || null,
+            status: document.getElementById("status").value
+        };
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/loans`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(loan)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(
+                    errorData.detail || "Failed to create loan."
+                );
+            }
+
+            showMessage("Loan added successfully.", "success");
+
+            loanForm.reset();
+
+            await loadLoans();
+
+        } catch (error) {
+            showMessage(error.message, "error");
+        }
+    });
+
+
+    loadLoans();
+</script>
+
+</body>
+</html>
