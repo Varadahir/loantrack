@@ -170,20 +170,20 @@ def get_loans():
 
     try:
         with pool.connection() as connection:
-            rows = connection.execute(
-                """
-                SELECT
-                    id,
-                    borrower_name,
-                    loan_amount,
-                    property_city,
-                    status,
-                    created_at
-                FROM loans
-                ORDER BY id
-                """,
-                row_factory=dict_row,
-            ).fetchall()
+            with connection.cursor(row_factory=dict_row) as cursor:
+                rows = cursor.execute(
+                    """
+                    SELECT
+                        id,
+                        borrower_name,
+                        loan_amount,
+                        property_city,
+                        status,
+                        created_at
+                    FROM loans
+                    ORDER BY id
+                    """
+                ).fetchall()
 
         loans = []
 
@@ -210,31 +210,31 @@ def create_loan(loan: LoanCreate):
 
     try:
         with pool.connection() as connection:
-            row = connection.execute(
-                """
-                INSERT INTO loans (
-                    borrower_name,
-                    loan_amount,
-                    property_city,
-                    status
-                )
-                VALUES (%s, %s, %s, %s)
-                RETURNING
-                    id,
-                    borrower_name,
-                    loan_amount,
-                    property_city,
-                    status,
-                    created_at
-                """,
-                (
-                    loan.borrower_name,
-                    loan.loan_amount,
-                    loan.property_city,
-                    loan.status,
-                ),
-                row_factory=dict_row,
-            ).fetchone()
+            with connection.cursor(row_factory=dict_row) as cursor:
+                row = cursor.execute(
+                    """
+                    INSERT INTO loans (
+                        borrower_name,
+                        loan_amount,
+                        property_city,
+                        status
+                    )
+                    VALUES (%s, %s, %s, %s)
+                    RETURNING
+                        id,
+                        borrower_name,
+                        loan_amount,
+                        property_city,
+                        status,
+                        created_at
+                    """,
+                    (
+                        loan.borrower_name,
+                        loan.loan_amount,
+                        loan.property_city,
+                        loan.status,
+                    ),
+                ).fetchone()
 
             connection.commit()
 
