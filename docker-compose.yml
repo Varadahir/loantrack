@@ -1,0 +1,70 @@
+services:
+
+  db:
+    image: postgres:17.11-alpine
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+    networks:
+      - loantrack
+
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    ports:
+      - "127.0.0.1:8000:8000"
+
+    networks:
+      - loantrack
+
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+
+    depends_on:
+      backend:
+        condition: service_healthy
+
+    ports:
+      - "8080:8080"
+
+    networks:
+      - loantrack
+
+
+volumes:
+  postgres_data:
+
+
+networks:
+  loantrack:
+    driver: bridge
