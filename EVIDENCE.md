@@ -1,28 +1,30 @@
-# LoanTrack — Evidence
+LoanTrack — Evidence
 
-## 1. Test Environment
+1. Test Environment
 
 LoanTrack was developed and tested locally on Windows using Docker Desktop, Docker Compose, kubectl, minikube, and Python.
 
 Kubernetes environment:
 
-- Kubernetes: v1.35.1
-- minikube: v1.38.1
-- Driver: Docker
+Kubernetes: v1.35.1
 
-All LoanTrack Kubernetes resources are deployed in the `loantrack` namespace.
+minikube: v1.38.1
 
----
+Driver: Docker
 
-# 2. Part B — Docker Evidence
+All LoanTrack Kubernetes resources are deployed in the loantrack namespace.
 
-## B1. Docker Images
+2. Part B — Docker Evidence
+
+B1. Docker Images
 
 LoanTrack contains a separate Dockerfile for each application tier:
 
-- backend/Dockerfile
-- frontend/Dockerfile
-- PostgreSQL uses the official PostgreSQL image.
+backend/Dockerfile
+
+frontend/Dockerfile
+
+PostgreSQL uses the official PostgreSQL image.
 
 The backend uses a multi-stage Docker build. Dependencies are installed in the builder stage and only the installed dependencies and application files are copied into the final image.
 
@@ -50,26 +52,24 @@ docker compose exec frontend whoami
 
 The backend image was verified to be below the required 300 MB limit.
 
-The containers were verified to run as the non-root user `appuser`.
+The containers were verified to run as the non-root user appuser.
 
----
-
-## B2. Docker Compose Services
+B2. Docker Compose Services
 
 Docker Compose runs all three application tiers:
 
 Browser
-   |
-   | HTTP
-   v
+|
+| HTTP
+v
 Frontend / Nginx
-   |
-   | HTTP
-   v
+|
+| HTTP
+v
 Backend API
-   |
-   | PostgreSQL
-   v
+|
+| PostgreSQL
+v
 PostgreSQL
 
 All services use the user-defined Docker network:
@@ -88,15 +88,15 @@ docker compose ps
 
 The following services were running successfully:
 
-- db
-- backend
-- frontend
+db
+
+backend
+
+frontend
 
 PostgreSQL health was checked before the backend started.
 
----
-
-## B3. Backend Health Check
+B3. Backend Health Check
 
 The backend provides:
 
@@ -111,14 +111,12 @@ Invoke-RestMethod http://localhost:8000/healthz
 Output:
 
 status service
------- -------
+
 ok     loantrack-api
 
-The backend Docker image also contains a Docker HEALTHCHECK using `/healthz`.
+The backend Docker image also contains a Docker HEALTHCHECK using /healthz.
 
----
-
-## B4. Database Readiness Check
+B4. Database Readiness Check
 
 The backend provides:
 
@@ -133,14 +131,12 @@ Invoke-RestMethod http://localhost:8000/readyz
 Output:
 
 status database
------- --------
+
 ready  reachable
 
 This confirms that the backend can reach PostgreSQL.
 
----
-
-## B5. Loan API
+B5. Loan API
 
 The backend provides:
 
@@ -162,9 +158,7 @@ Initial seed records:
 4 | Sophia Brown  | 425000.00 | Atlanta  | PENDING
 5 | Daniel Thomas | 310000.00 | Phoenix  | CLOSED
 
----
-
-## B6. Frontend-to-Backend Connectivity
+B6. Frontend-to-Backend Connectivity
 
 The frontend communicates with the backend over HTTP.
 
@@ -187,22 +181,20 @@ The frontend returned the same loan records provided by the backend.
 Traffic flow:
 
 Browser
-   |
-   | HTTP
-   v
+|
+| HTTP
+v
 Frontend
-   |
-   | HTTP /api/loans
-   v
+|
+| HTTP /api/loans
+v
 Backend
-   |
-   | PostgreSQL
-   v
+|
+| PostgreSQL
+v
 Database
 
----
-
-## B7. Docker Database Persistence
+B7. Docker Database Persistence
 
 PostgreSQL uses the named Docker volume:
 
@@ -216,7 +208,7 @@ docker compose up -d
 
 After restarting, the database records remained.
 
-This confirmed that normal `docker compose down` does not remove the named PostgreSQL volume.
+This confirmed that normal docker compose down does not remove the named PostgreSQL volume.
 
 The reset behavior was also tested using:
 
@@ -224,39 +216,39 @@ docker compose down -v
 
 docker compose up -d
 
-The `-v` option removed the named PostgreSQL volume. After the volume was recreated, the database was initialized again using the migration and seed data.
+The -v option removed the named PostgreSQL volume. After the volume was recreated, the database was initialized again using the migration and seed data.
 
 The database returned to the original five seed rows.
 
----
-
-## B8. Docker UI Evidence
+B8. Docker UI Evidence
 
 The LoanTrack application was successfully opened in the browser while running through Docker Compose.
 
 The UI displays:
 
-- Loan records
-- Loan amount
-- Property city
-- Status
-- Add Loan form
+Loan records
+
+Loan amount
+
+Property city
+
+Status
+
+Add Loan form
 
 Screenshot:
 
 evidence/docker-ui.png
 
----
+3. Part C — Database and Three-Tier Connectivity
 
-# 3. Part C — Database and Three-Tier Connectivity
-
-## C1. Database Schema
+C1. Database Schema
 
 The database schema is stored in:
 
 db/migrations/001_create_loans.sql
 
-The migration creates the `loans` table.
+The migration creates the loans table.
 
 Schema:
 
@@ -269,9 +261,7 @@ created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 
 The migration is applied automatically when the backend starts.
 
----
-
-## C2. Seed Data
+C2. Seed Data
 
 Seed data is stored in:
 
@@ -285,17 +275,13 @@ The seed file contains five records:
 4 | Sophia Brown  | 425000.00 | Atlanta  | PENDING
 5 | Daniel Thomas | 310000.00 | Phoenix  | CLOSED
 
----
+C3. Connection Pooling
 
-## C3. Connection Pooling
-
-The backend uses `psycopg-pool` for PostgreSQL connection pooling.
+The backend uses psycopg-pool for PostgreSQL connection pooling.
 
 The application uses a connection pool instead of creating a new database connection for every request.
 
----
-
-## C4. Database Startup
+C4. Database Startup
 
 The backend contains database startup retry logic with backoff.
 
@@ -308,21 +294,17 @@ Application startup complete.
 
 This confirms successful database connection, migration, and seed initialization.
 
----
-
-## C5. Health and Readiness Separation
+C5. Health and Readiness Separation
 
 The application separates process health from database readiness.
 
-`/healthz` checks whether the backend process is alive and does not depend on PostgreSQL.
+/healthz checks whether the backend process is alive and does not depend on PostgreSQL.
 
-`/readyz` checks whether the backend can communicate with PostgreSQL.
+/readyz checks whether the backend can communicate with PostgreSQL.
 
 This allows Kubernetes to distinguish between a running backend process and a backend that is ready to serve database-dependent requests.
 
----
-
-## C6. Add Loan Through UI and Verify in PostgreSQL
+C6. Add Loan Through UI and Verify in PostgreSQL
 
 A new loan was added through the LoanTrack frontend UI.
 
@@ -336,16 +318,16 @@ Status: PENDING
 Request flow:
 
 Browser
-   |
-   v
+|
+v
 Frontend
-   |
-   | POST /api/loans
-   v
+|
+| POST /api/loans
+v
 Backend
-   |
-   | PostgreSQL
-   v
+|
+| PostgreSQL
+v
 PostgreSQL
 
 The frontend does not communicate directly with PostgreSQL.
@@ -358,25 +340,23 @@ kubectl exec -n loantrack postgres-0 -- psql -U loantrack -d loantrack -c "SELEC
 
 Output:
 
- id | borrower_name | loan_amount | property_city |  status
+id | borrower_name | loan_amount | property_city |  status
 ----+---------------+-------------+---------------+----------
-  1 | Aarav Sharma  |   250000.00 | Austin        | APPROVED
-  2 | Emma Wilson   |   375000.00 | Dallas        | PENDING
-  3 | Rahul Patel   |   180000.00 | Houston       | APPROVED
-  4 | Sophia Brown  |   425000.00 | Atlanta       | PENDING
-  5 | Daniel Thomas |   310000.00 | Phoenix       | CLOSED
-  7 | varad demo    |   275000.00 | pune          | PENDING
+1 | Aarav Sharma  |   250000.00 | Austin        | APPROVED
+2 | Emma Wilson   |   375000.00 | Dallas        | PENDING
+3 | Rahul Patel   |   180000.00 | Houston       | APPROVED
+4 | Sophia Brown  |   425000.00 | Atlanta       | PENDING
+5 | Daniel Thomas |   310000.00 | Phoenix       | CLOSED
+7 | varad demo    |   275000.00 | pune          | PENDING
 (6 rows)
 
-The `varad demo` record confirms that the loan submitted through the frontend was successfully processed by the backend and persisted in PostgreSQL.
+The varad demo record confirms that the loan submitted through the frontend was successfully processed by the backend and persisted in PostgreSQL.
 
-The ID is `7` because PostgreSQL's SERIAL sequence does not automatically reuse the previously deleted ID `6`.
+The ID is 7 because PostgreSQL's SERIAL sequence does not automatically reuse the previously deleted ID 6.
 
----
+4. Part D — Kubernetes / minikube Evidence
 
-# 4. Part D — Kubernetes / minikube Evidence
-
-## D1. Kubernetes Namespace
+D1. Kubernetes Namespace
 
 LoanTrack is deployed into the dedicated namespace:
 
@@ -393,49 +373,45 @@ loantrack   Active
 
 LoanTrack resources are isolated inside this namespace.
 
----
-
-## D2. Kubernetes Architecture
+D2. Kubernetes Architecture
 
 The Kubernetes architecture is:
 
-                    Kubernetes Cluster
-                    Namespace: loantrack
+                Kubernetes Cluster
+                Namespace: loantrack
 
-                           Browser
-                              |
-                              |
-                         NodePort 30080
-                              |
-                              v
-                    +------------------+
-                    |    Frontend      |
-                    |   Deployment     |
-                    +--------+---------+
-                             |
-                             | HTTP
-                             v
-                    +------------------+
-                    |     Backend      |
-                    |    Deployment    |
-                    |   3 replicas     |
-                    +--------+---------+
-                             |
-                             | TCP 5432
-                             v
-                    +------------------+
-                    |   PostgreSQL     |
-                    |   StatefulSet    |
-                    +--------+---------+
-                             |
-                             v
-                    +------------------+
-                    | Persistent PVC   |
-                    +------------------+
+                       Browser
+                          |
+                          |
+                     NodePort 30080
+                          |
+                          v
+                +------------------+
+                |    Frontend      |
+                |   Deployment     |
+                +--------+---------+
+                         |
+                         | HTTP
+                         v
+                +------------------+
+                |     Backend      |
+                |    Deployment    |
+                |   3 replicas     |
+                +--------+---------+
+                         |
+                         | TCP 5432
+                         v
+                +------------------+
+                |   PostgreSQL     |
+                |   StatefulSet    |
+                +--------+---------+
+                         |
+                         v
+                +------------------+
+                | Persistent PVC   |
+                +------------------+
 
----
-
-## D3. PostgreSQL StatefulSet
+D3. PostgreSQL StatefulSet
 
 PostgreSQL was deployed as a StatefulSet.
 
@@ -457,9 +433,7 @@ PVC: Bound
 Storage: 2Gi
 Access Mode: ReadWriteOnce
 
----
-
-## D4. Backend Deployment
+D4. Backend Deployment
 
 The backend runs as a Kubernetes Deployment.
 
@@ -484,9 +458,7 @@ Verified state:
 Backend Deployment: 3/3
 Backend Service: ClusterIP
 
----
-
-## D5. Frontend Deployment
+D5. Frontend Deployment
 
 The frontend runs as a Kubernetes Deployment.
 
@@ -517,11 +489,9 @@ http://127.0.0.1:55506
 
 The exact URL may change between minikube runs.
 
----
+5. Kubernetes Configuration and Secrets
 
-# 5. Kubernetes Configuration and Secrets
-
-## D6. ConfigMap
+D6. ConfigMap
 
 Non-sensitive configuration is stored in:
 
@@ -539,17 +509,15 @@ Command:
 
 kubectl get configmap loantrack-config -n loantrack
 
----
-
-## D7. Kubernetes Secret
+D7. Kubernetes Secret
 
 Database credentials are stored in:
 
 loantrack-db-secret
 
-The real Secret was created from the local `.env` values.
+The real Secret was created from the local .env values.
 
-The Kubernetes manifests consume the credentials using `secretKeyRef`.
+The Kubernetes manifests consume the credentials using secretKeyRef.
 
 The repository contains:
 
@@ -568,11 +536,9 @@ loantrack-db-secret    Opaque   5      ...
 
 Secret values were intentionally not displayed.
 
----
+6. Kubernetes Health and Readiness Probes
 
-# 6. Kubernetes Health and Readiness Probes
-
-## Backend
+Backend
 
 Backend liveness probe:
 
@@ -586,7 +552,7 @@ The liveness probe checks whether the backend process is alive.
 
 The readiness probe checks whether the backend can access PostgreSQL.
 
-## Frontend
+Frontend
 
 Frontend liveness and readiness probes use:
 
@@ -594,9 +560,7 @@ Frontend liveness and readiness probes use:
 
 The probes verify that the frontend HTTP server is responding.
 
----
-
-# 7. Kubernetes DNS and Connectivity
+7. Kubernetes DNS and Connectivity
 
 The backend connects to PostgreSQL through the Kubernetes Service:
 
@@ -606,7 +570,7 @@ Fully qualified DNS name:
 
 postgres.loantrack.svc.cluster.local
 
-## DNS Resolution
+DNS Resolution
 
 Command:
 
@@ -618,7 +582,7 @@ Output:
 
 This confirms that Kubernetes DNS successfully resolves the PostgreSQL Service.
 
-## TCP Connectivity
+TCP Connectivity
 
 Command:
 
@@ -630,9 +594,7 @@ connected to postgres:5432
 
 This confirms that the backend pod can connect to PostgreSQL through the Kubernetes Service.
 
----
-
-# 8. Part D4 — Scale Backend to 3 Replicas
+8. Part D4 — Scale Backend to 3 Replicas
 
 The backend Deployment was scaled to three replicas.
 
@@ -661,28 +623,26 @@ Requests were repeatedly sent to the frontend API.
 Command:
 
 1..15 | ForEach-Object {
-    (Invoke-RestMethod "http://127.0.0.1:55506/api/loans").served_by
+(Invoke-RestMethod "http://127.0.0.1:55506/api/loans").served_by
 }
 
 The requests were served by multiple backend pod names.
 
 This demonstrates Kubernetes Service load balancing across the backend replicas.
 
----
-
-# 9. Part D4 — Rolling Update to v2
+9. Part D4 — Rolling Update to v2
 
 A backend v2 image was created:
 
-loantrack-backend:v2
+loantrack-backend
 
-The `/healthz` endpoint was changed to include:
+The /healthz endpoint was changed to include:
 
 version: v2
 
 Command:
 
-kubectl set image deployment/backend backend=loantrack-backend:v2 -n loantrack
+kubectl set image deployment/backend backend=loantrack-backend -n loantrack
 
 kubectl rollout status deployment/backend -n loantrack
 
@@ -696,25 +656,23 @@ Output:
 
 {"status":"ok","service":"loantrack-api","version":"v2"}
 
-## User Experience During Rolling Update
+User Experience During Rolling Update
 
 The backend Deployment uses:
 
 rollingUpdate:
-  maxUnavailable: 0
-  maxSurge: 1
+maxUnavailable: 0
+maxSurge: 1
 
-`maxUnavailable: 0` keeps existing backend capacity available during the update.
+maxUnavailable: 0 keeps existing backend capacity available during the update.
 
-`maxSurge: 1` allows Kubernetes to temporarily create one additional pod.
+maxSurge: 1 allows Kubernetes to temporarily create one additional pod.
 
 The readiness probe prevents traffic from being sent to a backend pod until it is ready.
 
 Therefore, a user should continue receiving responses during the rollout.
 
----
-
-# 10. Part D4 — Rollback
+10. Part D4 — Rollback
 
 The backend v2 deployment was rolled back using:
 
@@ -726,9 +684,7 @@ The backend was restored to the previous v1 image.
 
 This demonstrates Kubernetes Deployment revision history and rollback.
 
----
-
-# 11. Part D4 — Backend Pod Self-Healing
+11. Part D4 — Backend Pod Self-Healing
 
 A backend pod was deliberately deleted.
 
@@ -748,9 +704,7 @@ The replacement reached:
 
 This demonstrates Deployment self-healing.
 
----
-
-# 12. Part D4 — PostgreSQL Pod Recovery and Persistence
+12. Part D4 — PostgreSQL Pod Recovery and Persistence
 
 The PostgreSQL pod was deliberately deleted.
 
@@ -779,9 +733,7 @@ The database rows survived PostgreSQL pod deletion.
 
 This confirms that PostgreSQL data is stored on persistent storage rather than only inside the container filesystem.
 
----
-
-# 13. Final Kubernetes State
+13. Final Kubernetes State
 
 Command:
 
@@ -812,9 +764,7 @@ StatefulSet:
 
 postgres    1/1
 
----
-
-# 14. Final Kubernetes Resources
+14. Final Kubernetes Resources
 
 Command:
 
@@ -842,75 +792,74 @@ Data: 5
 
 Secret values were intentionally not displayed.
 
----
-
-# 15. Kubernetes UI Evidence
+15. Kubernetes UI Evidence
 
 The LoanTrack application was successfully opened through the Kubernetes NodePort.
 
 The UI showed:
 
-- Loan records
-- varad demo loan
-- Loan amount
-- Property city
-- Status
-- Add Loan form
+Loan records
+
+varad demo loan
+
+Loan amount
+
+Property city
+
+Status
+
+Add Loan form
 
 Screenshot:
 
 evidence/kubernetes-ui.png
 
----
-
-# 16. End-to-End Verification
+16. End-to-End Verification
 
 Final traffic flow:
 
 Browser
-   |
-   | HTTP
-   v
+|
+| HTTP
+v
 Frontend
-   |
-   | HTTP
-   v
+|
+| HTTP
+v
 Backend
-   |
-   | PostgreSQL
-   v
+|
+| PostgreSQL
+v
 PostgreSQL
-   |
-   v
+|
+v
 Persistent Storage
 
 The frontend never communicates directly with PostgreSQL.
 
 The backend is the application tier responsible for database communication.
 
----
+17. E4 — Problems Faced
 
-# 17. E4 — Problems Faced
+Issue 1 — psycopg3 Row Factory Error
 
-## Issue 1 — psycopg3 Row Factory Error
+Symptom
 
-### Symptom
+The backend initially had an error while returning database rows because the row_factory parameter was used incorrectly with the psycopg3 execute() operation.
 
-The backend initially had an error while returning database rows because the `row_factory` parameter was used incorrectly with the psycopg3 `execute()` operation.
+The /loans endpoint did not correctly return the expected dictionary-style rows.
 
-The `/loans` endpoint did not correctly return the expected dictionary-style rows.
-
-### Diagnosis
+Diagnosis
 
 The backend database query and psycopg3 cursor usage were inspected.
 
 The database query itself was valid, but the cursor configuration was incorrect.
 
-### Root Cause
+Root Cause
 
-`row_factory` is configured at the cursor level in psycopg3 and should not be passed as an `execute()` keyword argument.
+row_factory is configured at the cursor level in psycopg3 and should not be passed as an execute() keyword argument.
 
-### Fix
+Fix
 
 The cursor was changed to use:
 
@@ -926,99 +875,303 @@ The backend was verified with:
 
 python -m py_compile backend/app.py
 
-The `/loans` endpoint then returned the expected loan records.
+The /loans endpoint then returned the expected loan records.
 
 Git commit:
 
 9f94808 fix: correct psycopg row factory usage
 
----
+Issue 2 — Kubernetes Pod Startup Problem
 
-## Issue 2 — Kubernetes Pod Startup Problem
+Symptom
 
-Symptom:
+I reproduced a backend pod startup failure by temporarily setting the Deployment image to a nonexistent image tag.
 
-[ADD THE REAL POD STARTUP ERROR YOU EXPERIENCED HERE]
+Pod status:
 
-Diagnosis:
+backend-774bdd8f7c-5lzfc   0/1   ImagePullBackOff
 
-[ADD THE REAL COMMANDS YOU RAN, IN ORDER, HERE]
+Diagnosis
 
-Root Cause:
+Commands run in order:
 
-[ADD THE REAL ROOT CAUSE HERE]
+kubectl set image deployment/backend backend=loantrack-backend:not-found -n loantrack
+kubectl get pods -n loantrack
+kubectl describe pod backend-774bdd8f7c-5lzfc -n loantrack
 
-Fix:
+Relevant output:
 
-[ADD THE REAL FIX HERE]
+Image:          loantrack-backend:not-found
+State:          Waiting
+  Reason:       ErrImagePull
+Ready:          False
+
+Pod events showed:
+
+Failed to pull image "loantrack-backend:not-found"
+Error: ErrImagePull
+Back-off pulling image "loantrack-backend:not-found"
+Error: ImagePullBackOff
+
+Root Cause
+
+The Deployment referenced the image loantrack-backend:not-found, which did not exist in the minikube image store or an accessible registry. Kubernetes therefore could not pull the image.
+
+Fix
+
+I restored the Deployment to the valid locally built image:
+
+kubectl set image deployment/backend backend=loantrack-backend:v1 -n loantrack
+kubectl rollout status deployment/backend -n loantrack
 
 Verification:
 
-[ADD THE REAL VERIFICATION OUTPUT HERE]
+deployment "backend" successfully rolled out
 
----
+The backend returned to a healthy Running state.
 
-## Issue 3 — Refused Connection / Probe Problem
+Issue 3 — Refused Connection / Service Routing Problem
 
-Symptom:
+Symptom
 
-[ADD THE REAL REFUSED CONNECTION OR PROBE FAILURE YOU EXPERIENCED HERE]
+I reproduced a backend Service routing failure by temporarily changing the Service targetPort from 8000 to 8001.
 
-Diagnosis:
+The Service showed:
 
-[ADD THE REAL COMMANDS YOU RAN, IN ORDER, HERE]
+port:       8000
+targetPort: 8001
 
-Root Cause:
+The Service endpoints were published on port 8001:
 
-[ADD THE REAL ROOT CAUSE HERE]
+backend   10.244.0.107:8001
 
-Fix:
+A connection test from inside the Kubernetes cluster failed:
 
-[ADD THE REAL FIX HERE]
+Connecting to backend:8000 through Kubernetes Service...
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+ConnectionRefusedError: [Errno 111] Connection refused
+pod "connection-test" deleted from loantrack namespace
+pod loantrack/connection-test terminated (Error)
+
+Diagnosis
+
+Commands run in order:
+
+kubectl patch service backend -n loantrack --type strategic --patch-file .\service-bad.yaml
+kubectl get service backend -n loantrack -o yaml
+kubectl get endpoints backend -n loantrack
+kubectl run connection-test -n loantrack --rm -i --restart=Never --image=python:3.12-alpine -- python -c "import socket; print('Connecting to backend:8000 through Kubernetes Service...'); s=socket.socket(); s.settimeout(5); s.connect(('backend',8000)); print('CONNECTED'); s.close()"
+
+Root Cause
+
+The backend application listens on port 8000, but the Kubernetes Service was temporarily configured with targetPort: 8001.
+
+The Service therefore forwarded traffic to a port where the backend was not listening, producing ConnectionRefusedError: [Errno 111] Connection refused.
+
+Fix
+
+I restored the Service to the correct target port:
+
+kubectl patch service backend -n loantrack --type strategic --patch-file .\service-good.yaml
+Remove-Item .\service-good.yaml -Force
+kubectl get service backend -n loantrack
+kubectl get endpoints backend -n loantrack
+
+Verification showed:
+
+backend   ClusterIP   10.111.72.62   <none>   8000/TCP
+backend   10.244.0.107:8000
+
+The Service was restored to the port on which the backend listens.
+
+Issue 4 — Liveness Probe Killing a Healthy Container
+
+Symptom
+
+I reproduced a liveness-probe failure by temporarily changing the backend liveness endpoint from /healthz to /probe-test-failure.
+
+The new backend pod initially started successfully:
+
+backend-66f997dfc8-cwvk2   1/1   Running   0
+
+After the liveness checks ran, the same container was restarted:
+
+backend-66f997dfc8-cwvk2   1/1   Running   2 (12s ago)
+
+Diagnosis
+
+Commands run in order:
+
+kubectl patch deployment backend -n loantrack --type strategic --patch-file .\probe-bad.yaml
+kubectl rollout status deployment/backend -n loantrack --timeout=120s
+kubectl get pods -n loantrack -l app=backend
+Start-Sleep -Seconds 40
+kubectl get pods -n loantrack -l app=backend
+kubectl describe pod -n loantrack -l app=backend
+
+Relevant output:
+
+Restart Count: 2
+
+Liveness: http-get http://:8000/probe-test-failure
+delay=5s timeout=2s period=5s #success=1 #failure=3
+
+Kubernetes events showed:
+
+Warning  Unhealthy
+Liveness probe failed: HTTP probe failed with statuscode: 404
+
+Normal   Killing
+Container backend failed liveness probe, will be restarted
+
+Root Cause
+
+The backend container itself was running, but the liveness probe was configured to call /probe-test-failure, which does not exist and therefore returned HTTP 404.
+
+After three failed liveness checks, kubelet treated the container as unhealthy and restarted it.
+
+Fix
+
+I restored the original /healthz liveness probe:
+
+kubectl patch deployment backend -n loantrack --type strategic --patch-file .\probe-good.yaml
+Remove-Item .\probe-good.yaml -Force
+kubectl rollout status deployment/backend -n loantrack --timeout=120s
 
 Verification:
 
-[ADD THE REAL VERIFICATION OUTPUT HERE]
+deployment "backend" successfully rolled out
 
----
+The replacement backend pod reached:
 
-# 18. Verification Summary
+1/1   Running
 
-| Verification | Status |
-|---|---|
-| Docker Compose three-tier application | PASS |
-| Frontend to backend HTTP communication | PASS |
-| Backend to PostgreSQL communication | PASS |
-| PostgreSQL named volume | PASS |
-| Database migration | PASS |
-| Database seed data | PASS |
-| Connection pooling | PASS |
-| Backend /healthz | PASS |
-| Backend /readyz | PASS |
-| Kubernetes namespace | PASS |
-| PostgreSQL StatefulSet | PASS |
-| PostgreSQL persistent storage | PASS |
-| Backend Deployment | PASS |
-| Frontend Deployment | PASS |
-| Backend ClusterIP | PASS |
-| PostgreSQL ClusterIP | PASS |
-| Frontend NodePort | PASS |
-| Kubernetes ConfigMap | PASS |
-| Kubernetes Secret | PASS |
-| Kubernetes DNS resolution | PASS |
-| Backend-to-PostgreSQL connectivity | PASS |
-| Backend scaling to 3 replicas | PASS |
-| Multiple backend pods serving requests | PASS |
-| Backend v2 rolling update | PASS |
-| Kubernetes rollback | PASS |
-| Backend pod self-healing | PASS |
-| PostgreSQL pod recovery | PASS |
-| PostgreSQL data persistence | PASS |
-| Final Kubernetes resource verification | PASS |
+with the correct /healthz liveness probe restored.
 
----
+18. Verification Summary
 
-# 19. Application URLs
+Verification
+
+Status
+
+Docker Compose three-tier application
+
+PASS
+
+Frontend to backend HTTP communication
+
+PASS
+
+Backend to PostgreSQL communication
+
+PASS
+
+PostgreSQL named volume
+
+PASS
+
+Database migration
+
+PASS
+
+Database seed data
+
+PASS
+
+Connection pooling
+
+PASS
+
+Backend /healthz
+
+PASS
+
+Backend /readyz
+
+PASS
+
+Kubernetes namespace
+
+PASS
+
+PostgreSQL StatefulSet
+
+PASS
+
+PostgreSQL persistent storage
+
+PASS
+
+Backend Deployment
+
+PASS
+
+Frontend Deployment
+
+PASS
+
+Backend ClusterIP
+
+PASS
+
+PostgreSQL ClusterIP
+
+PASS
+
+Frontend NodePort
+
+PASS
+
+Kubernetes ConfigMap
+
+PASS
+
+Kubernetes Secret
+
+PASS
+
+Kubernetes DNS resolution
+
+PASS
+
+Backend-to-PostgreSQL connectivity
+
+PASS
+
+Backend scaling to 3 replicas
+
+PASS
+
+Multiple backend pods serving requests
+
+PASS
+
+Backend v2 rolling update
+
+PASS
+
+Kubernetes rollback
+
+PASS
+
+Backend pod self-healing
+
+PASS
+
+PostgreSQL pod recovery
+
+PASS
+
+PostgreSQL data persistence
+
+PASS
+
+Final Kubernetes resource verification
+
+PASS
+
+19. Application URLs
 
 Docker Compose frontend:
 
@@ -1038,25 +1191,29 @@ http://127.0.0.1:55506
 
 The exact URL may change between minikube runs.
 
----
-
-# 20. Security Verification
+20. Security Verification
 
 The following security requirements were verified:
 
-- `.env` is excluded using `.gitignore`.
-- Real database credentials are not committed to Git.
-- Kubernetes database credentials are stored in a Kubernetes Secret.
-- `k8s/secret.example.yaml` contains dummy values only.
-- Database passwords are not stored in the ConfigMap.
-- The frontend contains no PostgreSQL credentials.
-- The frontend does not connect directly to PostgreSQL.
-- PostgreSQL is exposed only through a ClusterIP Service inside Kubernetes.
-- Secret values were not included in this evidence document.
+.env is excluded using .gitignore.
 
----
+Real database credentials are not committed to Git.
 
-# 21. Conclusion
+Kubernetes database credentials are stored in a Kubernetes Secret.
+
+k8s/secret.example.yaml contains dummy values only.
+
+Database passwords are not stored in the ConfigMap.
+
+The frontend contains no PostgreSQL credentials.
+
+The frontend does not connect directly to PostgreSQL.
+
+PostgreSQL is exposed only through a ClusterIP Service inside Kubernetes.
+
+Secret values were not included in this evidence document.
+
+21. Conclusion
 
 LoanTrack was successfully deployed and tested using Docker Compose and Kubernetes on a local minikube cluster.
 
