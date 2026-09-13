@@ -98,3 +98,20 @@ Kubernetes:
 
 &#x20; postgres -> ClusterIP + StatefulSet + PVC
 
+
+## One-Command Kubernetes Deployment
+
+Run from the project root using Git Bash:
+
+./scripts/deploy.sh
+
+On Windows, if WSL bash is unavailable, run:
+
+& "C:\Program Files\Git\bin\bash.exe" scripts/deploy.sh
+
+The script builds the application images inside minikube, creates the namespace and database Secret, applies the ConfigMap, deploys PostgreSQL, backend, and frontend in order, waits for rollouts, and prints the final Kubernetes status.
+
+Open the application with:
+
+minikube service frontend -n loantrack --url
+

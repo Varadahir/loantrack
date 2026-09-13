@@ -68,7 +68,8 @@ kubectl get services -n loantrack
 echo ""
 echo "==> LoanTrack deployment completed successfully"
 echo ""
-echo "Open the application with:"
-echo "  minikube service frontend -n loantrack --url"
+echo "Application URL:"
+minikube service frontend -n loantrack --url
 echo ""
 echo "Namespace: loantrack"
+
